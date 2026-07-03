@@ -1,12 +1,15 @@
 from fastapi import FastAPI
 from sqlalchemy import text
 
+from app.api.routes import tasks
 from app.db.database import Base, engine
 from app.db import models
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Smart Task & Analytics API")
+
+app.include_router(tasks.router)
 
 
 @app.get("/")
