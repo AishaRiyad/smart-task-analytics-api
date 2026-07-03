@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.db.models import Task
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
+from app.services.cache_service import delete_cache
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -28,6 +29,7 @@ def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
     db.add(task)
     db.commit()
     db.refresh(task)
+    delete_cache("analytics_summary")
 
     return task
 
@@ -70,6 +72,7 @@ def update_task(
 
     db.commit()
     db.refresh(task)
+    delete_cache("analytics_summary")
 
     return task
 
@@ -89,6 +92,7 @@ def patch_task(
 
     db.commit()
     db.refresh(task)
+    delete_cache("analytics_summary")
 
     return task
 
@@ -99,5 +103,6 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
 
     db.delete(task)
     db.commit()
+    delete_cache("analytics_summary")
 
     return None
