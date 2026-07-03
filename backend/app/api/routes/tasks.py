@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -34,6 +35,21 @@ def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=list[TaskResponse])
 def get_tasks(db: Session = Depends(get_db)):
     return db.query(Task).order_by(Task.id.desc()).all()
+
+
+@router.get("/search/", response_model=list[TaskResponse])
+def search_tasks(keyword: str, db: Session = Depends(get_db)):
+    return (
+        db.query(Task)
+        .filter(
+            or_(
+                Task.title.ilike(f"%{keyword}%"),
+                Task.description.ilike(f"%{keyword}%")
+            )
+        )
+        .order_by(Task.id.desc())
+        .all()
+    )
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
