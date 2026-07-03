@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from sqlalchemy import text
 
-from app.api.routes import tasks
+from app.api.routes import analytics, tasks
 from app.core.middleware import add_process_time_header
 from app.db.database import Base, engine
 from app.db import models
@@ -13,6 +13,7 @@ app = FastAPI(title="Smart Task & Analytics API")
 app.middleware("http")(add_process_time_header)
 
 app.include_router(tasks.router)
+app.include_router(analytics.router)
 
 
 @app.get("/")
