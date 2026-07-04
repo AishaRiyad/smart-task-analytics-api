@@ -9,7 +9,7 @@ class Task(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(150), nullable=False, index=True)
-    description = Column(Text, nullable=True)
+    description = Column(Text, nullable=True, index=True)
     completed = Column(Boolean, default=False, nullable=False)
     completion_time = Column(Integer, nullable=True)  
 
