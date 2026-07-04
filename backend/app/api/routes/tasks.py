@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -6,6 +6,7 @@ from app.db.database import get_db
 from app.db.models import Task
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from app.services.cache_service import delete_cache
+from app.services.email_service import send_fake_email
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -23,13 +24,20 @@ def get_task_or_404(task_id: int, db: Session):
 
 
 @router.post("/", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
-def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
+def create_task(
+    task_data: TaskCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     task = Task(**task_data.model_dump())
 
     db.add(task)
     db.commit()
     db.refresh(task)
+
     delete_cache("analytics_summary")
+
+    background_tasks.add_task(send_fake_email, task.title)
 
     return task
 
