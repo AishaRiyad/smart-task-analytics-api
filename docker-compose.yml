@@ -5,7 +5,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/app:/code/app
+      - ./backend:/code
     env_file:
       - ./backend/.env
     depends_on:
