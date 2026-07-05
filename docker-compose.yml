@@ -9,6 +9,8 @@ services:
       - ./backend:/code
     env_file:
       - ./backend/.env
+    environment:
+      - PYTHONPATH=/code
     depends_on:
       - db
       - redis

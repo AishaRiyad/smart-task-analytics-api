@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from sqlalchemy import text
 
@@ -6,9 +8,17 @@ from app.core.middleware import add_process_time_header
 from app.db.database import Base, engine
 from app.db import models
 
-Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Smart Task & Analytics API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(
+    title="Smart Task & Analytics API",
+    lifespan=lifespan
+)
 
 app.middleware("http")(add_process_time_header)
 
