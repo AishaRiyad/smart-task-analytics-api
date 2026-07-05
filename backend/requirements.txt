@@ -11,3 +11,4 @@ pytest
 pytest-asyncio
 locust
 testcontainers[postgres]
+testcontainers[redis]
