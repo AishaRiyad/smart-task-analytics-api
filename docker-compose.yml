@@ -7,13 +7,19 @@ services:
       - "8089:8089"
     volumes:
       - ./backend:/code
+      - /var/run/docker.sock:/var/run/docker.sock
     env_file:
       - ./backend/.env
     environment:
       - PYTHONPATH=/code
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
+      - TESTCONTAINERS_RYUK_DISABLED=true
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   db:
     image: postgres:16
@@ -26,6 +32,11 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d smart_tasks"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7
