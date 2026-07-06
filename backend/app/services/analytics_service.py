@@ -1,9 +1,15 @@
+import time
+
 from sqlalchemy.orm import Session
 
 from app.db.models import Task
 
 
 def calculate_task_summary(db: Session):
+    # Simulate expensive analytics calculation for performance benchmarking.
+    # To helps us compare between database calculation & Redis cache.
+    time.sleep(0.5)
+
     total_tasks = db.query(Task).count()
 
     completed_tasks = db.query(Task).filter(Task.completed == True).count()
