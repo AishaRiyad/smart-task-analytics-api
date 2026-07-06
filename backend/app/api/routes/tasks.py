@@ -42,6 +42,22 @@ def create_task(
     return task
 
 
+@router.post("/sync-email")
+def create_task_sync(
+    task_data: TaskCreate,
+    db: Session = Depends(get_db)
+):
+    task = Task(**task_data.model_dump())
+
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+
+    send_fake_email(task.title)
+
+    return task
+
+
 @router.get("/", response_model=list[TaskResponse])
 def get_tasks(db: Session = Depends(get_db)):
     return db.query(Task).order_by(Task.id.desc()).all()
