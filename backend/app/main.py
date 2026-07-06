@@ -1,9 +1,7 @@
-import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
 
 from app.api.routes import analytics, external, tasks
 from app.core.middleware import add_process_time_header
@@ -13,17 +11,7 @@ from app.db import models
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    for attempt in range(10):
-        try:
-            Base.metadata.create_all(bind=engine)
-            print("Database connected successfully.")
-            break
-        except OperationalError:
-            print(f"Database not ready... retry {attempt + 1}/10")
-            time.sleep(2)
-    else:
-        raise RuntimeError("Could not connect to the database.")
-
+    Base.metadata.create_all(bind=engine)
     yield
 
 
