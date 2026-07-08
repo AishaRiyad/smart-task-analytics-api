@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field
 from datetime import datetime
+
+from pydantic import BaseModel, Field
 
 
 class TaskBase(BaseModel):
@@ -22,6 +23,7 @@ class TaskUpdate(BaseModel):
 
 class TaskResponse(TaskBase):
     id: int
+    owner_id: int | None = None
     created_at: datetime
     updated_at: datetime | None = None
 

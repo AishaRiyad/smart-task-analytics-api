@@ -2,8 +2,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.api.routes.auth import get_current_user
 from app.db.database import get_db
-from app.db.models import Task
+from app.db.models import Task, User
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from app.services.cache_service import delete_cache
 from app.services.email_service import (
@@ -14,8 +15,12 @@ from app.services.email_service import (
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
-def get_task_or_404(task_id: int, db: Session):
-    task = db.query(Task).filter(Task.id == task_id).first()
+def get_task_or_404(task_id: int, db: Session, current_user: User):
+    task = (
+        db.query(Task)
+        .filter(Task.id == task_id, Task.owner_id == current_user.id)
+        .first()
+    )
 
     if not task:
         raise HTTPException(
@@ -30,32 +35,40 @@ def get_task_or_404(task_id: int, db: Session):
 def create_task(
     task_data: TaskCreate,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    task = Task(**task_data.model_dump())
+    task = Task(
+        **task_data.model_dump(),
+        owner_id=current_user.id
+    )
 
     db.add(task)
     db.commit()
     db.refresh(task)
 
     delete_cache("analytics_summary")
-
     background_tasks.add_task(send_fake_email_background, task.title)
 
     return task
 
 
-@router.post("/sync-email")
-def create_task_sync(
+@router.post("/sync-email", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+def create_task_with_sync_email(
     task_data: TaskCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    task = Task(**task_data.model_dump())
+    task = Task(
+        **task_data.model_dump(),
+        owner_id=current_user.id
+    )
 
     db.add(task)
     db.commit()
     db.refresh(task)
 
+    delete_cache("analytics_summary")
     send_fake_email_sync(task.title)
 
     return task
@@ -65,7 +78,8 @@ def create_task_sync(
 def get_tasks(
     page: int = 1,
     size: int = 20,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     if page < 1:
         page = 1
@@ -80,6 +94,7 @@ def get_tasks(
 
     return (
         db.query(Task)
+        .filter(Task.owner_id == current_user.id)
         .order_by(Task.id.desc())
         .offset(offset)
         .limit(size)
@@ -93,7 +108,8 @@ def search_tasks(
     mode: str = "prefix",
     page: int = 1,
     size: int = 20,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     if page < 1:
         page = 1
@@ -114,8 +130,11 @@ def search_tasks(
     return (
         db.query(Task)
         .filter(
-            (Task.title.ilike(search_pattern)) |
-            (Task.description.ilike(search_pattern))
+            Task.owner_id == current_user.id,
+            (
+                (Task.title.ilike(search_pattern)) |
+                (Task.description.ilike(search_pattern))
+            )
         )
         .order_by(Task.id.desc())
         .offset(offset)
@@ -129,7 +148,8 @@ def full_text_search_tasks(
     keyword: str,
     page: int = 1,
     size: int = 20,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     if page < 1:
         page = 1
@@ -145,7 +165,8 @@ def full_text_search_tasks(
     query = text("""
         SELECT *
         FROM tasks
-        WHERE to_tsvector('english', title || ' ' || COALESCE(description, ''))
+        WHERE owner_id = :owner_id
+          AND to_tsvector('english', title || ' ' || COALESCE(description, ''))
               @@ plainto_tsquery('english', :keyword)
         ORDER BY id DESC
         LIMIT :size OFFSET :offset
@@ -154,6 +175,7 @@ def full_text_search_tasks(
     result = db.execute(
         query,
         {
+            "owner_id": current_user.id,
             "keyword": keyword,
             "size": size,
             "offset": offset
@@ -164,17 +186,22 @@ def full_text_search_tasks(
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
-def get_task(task_id: int, db: Session = Depends(get_db)):
-    return get_task_or_404(task_id, db)
+def get_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_task_or_404(task_id, db, current_user)
 
 
 @router.put("/{task_id}", response_model=TaskResponse)
 def update_task(
     task_id: int,
     task_data: TaskCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    task = get_task_or_404(task_id, db)
+    task = get_task_or_404(task_id, db, current_user)
 
     for field, value in task_data.model_dump().items():
         setattr(task, field, value)
@@ -190,9 +217,10 @@ def update_task(
 def patch_task(
     task_id: int,
     task_data: TaskUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    task = get_task_or_404(task_id, db)
+    task = get_task_or_404(task_id, db, current_user)
 
     update_data = task_data.model_dump(exclude_unset=True)
 
@@ -207,8 +235,12 @@ def patch_task(
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_task(task_id: int, db: Session = Depends(get_db)):
-    task = get_task_or_404(task_id, db)
+def delete_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    task = get_task_or_404(task_id, db, current_user)
 
     db.delete(task)
     db.commit()

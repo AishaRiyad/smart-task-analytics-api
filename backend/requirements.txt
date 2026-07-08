@@ -13,3 +13,9 @@ locust
 testcontainers[postgres]
 testcontainers[redis]
 requests
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+email-validator
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
