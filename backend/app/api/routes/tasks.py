@@ -1,4 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -121,6 +122,45 @@ def search_tasks(
         .limit(size)
         .all()
     )
+
+
+@router.get("/full-text-search/", response_model=list[TaskResponse])
+def full_text_search_tasks(
+    keyword: str,
+    page: int = 1,
+    size: int = 20,
+    db: Session = Depends(get_db)
+):
+    if page < 1:
+        page = 1
+
+    if size < 1:
+        size = 20
+
+    if size > 100:
+        size = 100
+
+    offset = (page - 1) * size
+
+    query = text("""
+        SELECT *
+        FROM tasks
+        WHERE to_tsvector('english', title || ' ' || COALESCE(description, ''))
+              @@ plainto_tsquery('english', :keyword)
+        ORDER BY id DESC
+        LIMIT :size OFFSET :offset
+    """)
+
+    result = db.execute(
+        query,
+        {
+            "keyword": keyword,
+            "size": size,
+            "offset": offset
+        }
+    )
+
+    return result.mappings().all()
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
