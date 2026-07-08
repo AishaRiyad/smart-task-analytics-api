@@ -62,8 +62,29 @@ def create_task_sync(
 
 
 @router.get("/", response_model=list[TaskResponse])
-def get_tasks(db: Session = Depends(get_db)):
-    return db.query(Task).order_by(Task.id.desc()).all()
+def get_tasks(
+    page: int = 1,
+    size: int = 20,
+    db: Session = Depends(get_db)
+):
+    if page < 1:
+        page = 1
+
+    if size < 1:
+        size = 20
+
+    if size > 100:
+        size = 100
+
+    offset = (page - 1) * size
+
+    return (
+        db.query(Task)
+        .order_by(Task.id.desc())
+        .offset(offset)
+        .limit(size)
+        .all()
+    )
 
 
 @router.get("/search/", response_model=list[TaskResponse])

@@ -1,11 +1,11 @@
 from unittest.mock import patch
 
-from app.services.email_service import send_fake_email
+from app.services.email_service import send_fake_email_sync
 from app.services.external_service import get_weather_sync
 
 
 def test_email_service_mocked():
-    with patch("app.services.email_service.send_fake_email") as mock_email:
+    with patch("app.services.email_service.send_fake_email_sync") as mock_email:
         mock_email("Test task")
 
         mock_email.assert_called_once_with("Test task")
