@@ -6,7 +6,10 @@ from app.db.database import get_db
 from app.db.models import Task
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from app.services.cache_service import delete_cache
-from app.services.email_service import send_fake_email
+from app.services.email_service import (
+    send_fake_email_background,
+    send_fake_email_sync,
+)
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -37,7 +40,7 @@ def create_task(
 
     delete_cache("analytics_summary")
 
-    background_tasks.add_task(send_fake_email, task.title)
+    background_tasks.add_task(send_fake_email_background, task.title)
 
     return task
 
@@ -53,7 +56,7 @@ def create_task_sync(
     db.commit()
     db.refresh(task)
 
-    send_fake_email(task.title)
+    send_fake_email_sync(task.title)
 
     return task
 
