@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 from sqlalchemy import text
 
 from app.api.routes import analytics, external, tasks
@@ -19,6 +20,8 @@ app = FastAPI(
     title="Smart Task & Analytics API",
     lifespan=lifespan
 )
+
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 app.middleware("http")(add_process_time_header)
 
