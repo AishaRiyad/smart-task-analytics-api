@@ -1,5 +1,4 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -88,16 +87,38 @@ def get_tasks(
 
 
 @router.get("/search/", response_model=list[TaskResponse])
-def search_tasks(keyword: str, db: Session = Depends(get_db)):
+def search_tasks(
+    keyword: str,
+    mode: str = "prefix",
+    page: int = 1,
+    size: int = 20,
+    db: Session = Depends(get_db)
+):
+    if page < 1:
+        page = 1
+
+    if size < 1:
+        size = 20
+
+    if size > 100:
+        size = 100
+
+    offset = (page - 1) * size
+
+    if mode == "contains":
+        search_pattern = f"%{keyword}%"
+    else:
+        search_pattern = f"{keyword}%"
+
     return (
         db.query(Task)
         .filter(
-            or_(
-                Task.title.ilike(f"%{keyword}%"),
-                Task.description.ilike(f"%{keyword}%")
-            )
+            (Task.title.ilike(search_pattern)) |
+            (Task.description.ilike(search_pattern))
         )
         .order_by(Task.id.desc())
+        .offset(offset)
+        .limit(size)
         .all()
     )
 
