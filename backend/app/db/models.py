@@ -13,7 +13,17 @@ class User(Base):
     email = Column(String(150), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
 
-    tasks = relationship("Task", back_populates="owner")
+    tasks = relationship(
+        "Task",
+        back_populates="owner",
+        cascade="all, delete-orphan"
+    )
+
+    comments = relationship(
+        "Comment",
+        back_populates="owner",
+        cascade="all, delete-orphan"
+    )
 
 
 class Task(Base):
@@ -25,8 +35,40 @@ class Task(Base):
     completed = Column(Boolean, default=False, nullable=False)
     completion_time = Column(Integer, nullable=True)
 
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    owner = relationship("User", back_populates="tasks")
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    owner = relationship(
+        "User",
+        back_populates="tasks"
+    )
+
+    comments = relationship(
+        "Comment",
+        back_populates="task",
+        cascade="all, delete-orphan"
+    )
+
+
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(Text, nullable=False)
+
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    task = relationship(
+        "Task",
+        back_populates="comments"
+    )
+
+    owner = relationship(
+        "User",
+        back_populates="comments"
+    )
