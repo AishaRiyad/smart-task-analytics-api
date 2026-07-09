@@ -31,6 +31,4 @@ def benchmark(endpoint):
 
 
 if __name__ == "__main__":
-    benchmark("/tasks/search/?keyword=Performance&mode=prefix&page=1&size=20")
-    benchmark("/tasks/search/?keyword=formance&mode=contains&page=1&size=20")
-    benchmark("/tasks/full-text-search/?keyword=Performance&page=1&size=20")
+    benchmark("/tasks/?page=1&size=20")
