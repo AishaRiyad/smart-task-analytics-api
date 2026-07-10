@@ -8,6 +8,7 @@ from app.api.routes import analytics, auth, external, tasks
 from app.core.middleware import add_process_time_header
 from app.db.database import Base, engine
 from app.db import models
+from app.core.profiler import ProfilerMiddleware
 
 
 @asynccontextmanager
@@ -22,6 +23,7 @@ app = FastAPI(
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
+app.add_middleware(ProfilerMiddleware)
 
 app.middleware("http")(add_process_time_header)
 
