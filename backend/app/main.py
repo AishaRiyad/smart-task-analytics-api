@@ -31,6 +31,7 @@ app.include_router(analytics.router)
 app.include_router(external.router)
 
 
+
 @app.get("/")
 def root():
     return {"message": "Smart Task & Analytics API is running"}

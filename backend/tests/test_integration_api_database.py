@@ -46,32 +46,35 @@ def integration_client(test_db):
     return TestClient(app)
 
 
-def test_create_then_get_task_integration(integration_client):
+def test_create_then_get_task_integration(integration_client, auth_headers):
     create_response = integration_client.post("/tasks/", json={
         "title": "Integration task",
         "description": "Testing API with isolated PostgreSQL container",
         "completed": False,
         "completion_time": None
-    })
+    }, headers=auth_headers)
 
     assert create_response.status_code == 201
 
     task_id = create_response.json()["id"]
 
-    get_response = integration_client.get(f"/tasks/{task_id}")
+    get_response = integration_client.get(
+        f"/tasks/{task_id}",
+        headers=auth_headers
+    )
 
     assert get_response.status_code == 200
     assert get_response.json()["id"] == task_id
     assert get_response.json()["title"] == "Integration task"
 
 
-def test_create_update_delete_task_integration(integration_client):
+def test_create_update_delete_task_integration(integration_client, auth_headers):
     create_response = integration_client.post("/tasks/", json={
         "title": "Full integration task",
         "description": "Testing create update delete",
         "completed": False,
         "completion_time": None
-    })
+    }, headers=auth_headers)
 
     assert create_response.status_code == 201
     task_id = create_response.json()["id"]
@@ -81,16 +84,22 @@ def test_create_update_delete_task_integration(integration_client):
         "description": "Updated description",
         "completed": True,
         "completion_time": 30
-    })
+    }, headers=auth_headers)
 
     assert update_response.status_code == 200
     assert update_response.json()["completed"] is True
     assert update_response.json()["completion_time"] == 30
 
-    delete_response = integration_client.delete(f"/tasks/{task_id}")
+    delete_response = integration_client.delete(
+        f"/tasks/{task_id}",
+        headers=auth_headers
+    )
 
     assert delete_response.status_code == 204
 
-    get_deleted_response = integration_client.get(f"/tasks/{task_id}")
+    get_deleted_response = integration_client.get(
+        f"/tasks/{task_id}",
+        headers=auth_headers
+    )
 
     assert get_deleted_response.status_code == 404
