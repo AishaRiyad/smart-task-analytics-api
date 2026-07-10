@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from sqlalchemy import text
 
-from app.api.routes import analytics, auth, external, tasks
+from app.api.routes import analytics, auth, export, external, tasks
 from app.core.middleware import add_process_time_header
 from app.db.database import Base, engine
 from app.db import models
@@ -29,6 +29,7 @@ app.include_router(auth.router)
 app.include_router(tasks.router)
 app.include_router(analytics.router)
 app.include_router(external.router)
+app.include_router(export.router)
 
 
 @app.get("/")
