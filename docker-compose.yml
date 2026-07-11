@@ -11,10 +11,10 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - PYTHONPATH=/code
-      - DOCKER_HOST=unix:///var/run/docker.sock
-      - TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
-      - TESTCONTAINERS_RYUK_DISABLED=true
+      PYTHONPATH: /code
+      DOCKER_HOST: unix:///var/run/docker.sock
+      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+      TESTCONTAINERS_RYUK_DISABLED: "true"
     depends_on:
       db:
         condition: service_healthy
@@ -24,6 +24,7 @@ services:
   db:
     image: postgres:16
     container_name: smart_task_db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
@@ -41,6 +42,7 @@ services:
   redis:
     image: redis:7
     container_name: smart_task_redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
 

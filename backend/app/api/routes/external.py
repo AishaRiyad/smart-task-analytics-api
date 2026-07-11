@@ -1,12 +1,18 @@
 from fastapi import APIRouter
 
-from app.services.external_service import get_weather_sync, get_weather_async
+from app.services.external_service import (
+    get_weather_async,
+    get_weather_sync,
+)
 
-router = APIRouter(prefix="/external", tags=["External API Simulation"])
+router = APIRouter(
+    prefix="/external",
+    tags=["External API Simulation"],
+)
 
 
 @router.get("/weather-sync")
-def weather_sync():
+async def weather_sync():
     return get_weather_sync()
 
 

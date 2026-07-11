@@ -1,42 +1,69 @@
+import pytest
 from testcontainers.postgres import PostgresContainer
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.db.database import Base
-from app.db.models import Task
+from app.db.models import Task, User
 
 
-def test_create_and_read_task_with_postgres_container():
+@pytest.mark.asyncio
+async def test_create_and_read_task_with_postgres_container():
     with PostgresContainer("postgres:16") as postgres:
-        engine = create_engine(postgres.get_connection_url())
-        TestingSessionLocal = sessionmaker(
-            autocommit=False,
-            autoflush=False,
-            bind=engine
+        database_url = postgres.get_connection_url().replace(
+            "postgresql+psycopg2://",
+            "postgresql+asyncpg://",
         )
 
-        Base.metadata.create_all(bind=engine)
+        engine = create_async_engine(database_url)
 
-        db = TestingSessionLocal()
+        TestingSessionLocal = async_sessionmaker(
+            bind=engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
 
-        try:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+
+        async with TestingSessionLocal() as db:
+            user = User(
+                username="containeruser",
+                email="container@example.com",
+                hashed_password="hashed",
+            )
+
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+
             task = Task(
                 title="Container test task",
                 description="Testing real PostgreSQL container",
                 completed=False,
-                completion_time=None
+                completion_time=None,
+                owner_id=user.id,
             )
 
             db.add(task)
-            db.commit()
-            db.refresh(task)
+            await db.commit()
+            await db.refresh(task)
 
-            saved_task = db.query(Task).filter(Task.id == task.id).first()
+            result = await db.execute(
+                select(Task).where(Task.id == task.id)
+            )
+
+            saved_task = result.scalar_one_or_none()
 
             assert saved_task is not None
             assert saved_task.title == "Container test task"
-            assert saved_task.completed is False
+            assert saved_task.owner_id == user.id
 
-        finally:
-            db.close()
-            Base.metadata.drop_all(bind=engine)
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.drop_all)
+
+        await engine.dispose()

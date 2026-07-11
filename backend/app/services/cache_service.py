@@ -1,40 +1,53 @@
 import json
-import redis
+from typing import Any
+
+import redis.asyncio as redis
 
 from app.core.config import settings
 
 
-redis_client = redis.Redis.from_url(
+redis_client = redis.from_url(
     settings.redis_url,
-    decode_responses=True
+    decode_responses=True,
 )
 
 
-def get_cache(key: str):
+async def get_cache(key: str) -> Any | None:
     try:
-        cached_data = redis_client.get(key)
+        cached_data = await redis_client.get(key)
 
-        if cached_data:
-            return json.loads(cached_data)
+        if cached_data is None:
+            return None
 
-        return None
+        return json.loads(cached_data)
+
     except redis.RedisError:
         return None
 
 
-def set_cache(key: str, value, expire_seconds: int = 60):
+async def set_cache(
+    key: str,
+    value: Any,
+    expire_seconds: int = 60,
+) -> None:
     try:
-        redis_client.setex(
+        await redis_client.set(
             key,
-            expire_seconds,
-            json.dumps(value)
+            json.dumps(value),
+            ex=expire_seconds,
         )
+
     except redis.RedisError:
         pass
 
 
-def delete_cache(key: str):
+async def delete_cache(key: str) -> None:
     try:
-        redis_client.delete(key)
+        await redis_client.delete(key)
+
     except redis.RedisError:
         pass
+
+
+async def close_redis() -> None:
+    await redis_client.aclose()
