@@ -546,6 +546,18 @@ docker compose exec backend locust -f performance/locustfile.py SyncExternalUser
 docker compose exec backend locust -f performance/locustfile.py AsyncExternalUser --host http://localhost:8000
 ```
 
+## Generate a Full Application Flamegraph
+
+```bash
+MSYS_NO_PATHCONV=1 docker compose exec -u root backend py-spy record \
+  --pid 1 \
+  --subprocesses \
+  --rate 100 \
+  --duration 60 \
+  --format flamegraph \
+  -o /profiles/full-application-flamegraph.svg
+```
+
 ---
 
 # Discussion Summary
